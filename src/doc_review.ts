@@ -8,18 +8,25 @@
  * presented to users will reflect this limited scope.
  */
 
-
 function retrieveComments() {
-  let comments = Drive.Comments.list(DocumentApp.getActiveDocument().getId(), {'fields': 'comments(*)'});
+  const comments = Drive.Comments.list(
+    DocumentApp.getActiveDocument().getId(),
+    { fields: 'comments(*)' }
+  );
   console.log(comments);
-  if (comments.items && comments.items.length > 0) {
-    for (var i = 0; i < comments.items.length; i++) {
-      var comment = comments.items[i];
-      Logger.log('%s on %s by %s', comment.content, comment.createdDate, comment.author.displayName);
-    }
-  } else {
-    Logger.log('No comments found.');
-  }
+  // if (comments.items && comments.items.length > 0) {
+  //   for (let i = 0; i < comments.items.length; i++) {
+  //     const comment = comments.items[i];
+  //     Logger.log(
+  //       '%s on %s by %s',
+  //       comment.content,
+  //       comment.createdDate,
+  //       comment.author.displayName
+  //     );
+  //   }
+  // } else {
+  //   Logger.log('No comments found.');
+  // }
 }
 
 /**
@@ -31,12 +38,11 @@ function retrieveComments() {
  *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
  *     running in, inspect e.authMode.
  */
-function onOpen(e) {
-  DocumentApp.getUi().createAddonMenu()
-      .addItem('Start', 'showSidebar')
-      .addToUi();
-  retrieveComments();
-}
+// function onOpen(e) {
+//   DocumentApp.getUi().createAddonMenu()
+//       .addItem('Start', 'showSidebar')
+//       .addToUi();
+// }
 
 /**
  * Runs when the add-on is installed.
@@ -49,22 +55,20 @@ function onOpen(e) {
  *     run in AuthMode.FULL, but onOpen triggers may be AuthMode.LIMITED or
  *     AuthMode.NONE.)
  */
-function onInstall(e) {
-  onOpen(e);
-}
+// function onInstall(e) {
+//   onOpen(e);
+// }
 
 /**
  * Opens a sidebar in the document containing the add-on's user interface.
  * This method is only used by the regular add-on, and is never called by
  * the mobile add-on version.
  */
-function showSidebar() {
-  const ui = HtmlService.createHtmlOutputFromFile('sidebar')
-      .setTitle('Doc Review');
-  DocumentApp.getUi().showSidebar(ui);
-}
-
-
+// function showSidebar() {
+//   const ui = HtmlService.createHtmlOutputFromFile('sidebar')
+//       .setTitle('Doc Review');
+//   DocumentApp.getUi().showSidebar(ui);
+// }
 
 /**
  * Gets the text the user has selected. If there is no selection,
@@ -85,11 +89,11 @@ function getSelectedText() {
 
         text.push(element.getText().substring(startIndex, endIndex + 1));
       } else {
-        const element = elements[i].getElement();
+        const element = elements[i].getElement().asText();
         // Only translate elements that can be edited as text; skip images and
         // other non-text elements.
-        if (element.editAsText) {
-          const elementText = element.asText().getText();
+        if (element.editAsText()) {
+          const elementText = element.getText();
           // This check is necessary to exclude images, which return a blank
           // text element.
           if (elementText) {
@@ -116,7 +120,7 @@ function getPreferences() {
   const userProperties = PropertiesService.getUserProperties();
   return {
     originLang: userProperties.getProperty('originLang'),
-    destLang: userProperties.getProperty('destLang')
+    destLang: userProperties.getProperty('destLang'),
   };
 }
 
@@ -134,16 +138,20 @@ function getPreferences() {
  * @return {Object} Object containing the original text and the result of the
  *     translation.
  */
-function getTextAndTranslation(origin, dest, savePrefs) {
+function getTextAndTranslation(
+  origin: string,
+  dest: string,
+  savePrefs: boolean
+) {
   if (savePrefs) {
     PropertiesService.getUserProperties()
-        .setProperty('originLang', origin)
-        .setProperty('destLang', dest);
+      .setProperty('originLang', origin)
+      .setProperty('destLang', dest);
   }
   const text = getSelectedText().join('\n');
   return {
     text: text,
-    translation: translateText(text, origin, dest)
+    translation: translateText(text, origin, dest),
   };
 }
 
@@ -156,14 +164,17 @@ function getTextAndTranslation(origin, dest, savePrefs) {
  *
  * @param {string} newText The text with which to replace the current selection.
  */
-function insertText(newText) {
+function insertText(newText: string) {
   const selection = DocumentApp.getActiveDocument().getSelection();
   if (selection) {
     let replaced = false;
     const elements = selection.getSelectedElements();
-    if (elements.length === 1 && elements[0].getElement().getType() ===
-      DocumentApp.ElementType.INLINE_IMAGE) {
-      throw new Error('Can\'t insert text into an image.');
+    if (
+      elements.length === 1 &&
+      elements[0].getElement().getType() ===
+        DocumentApp.ElementType.INLINE_IMAGE
+    ) {
+      throw new Error("Can't insert text into an image.");
     }
     for (let i = 0; i < elements.length; ++i) {
       if (elements[i].isPartial()) {
@@ -190,12 +201,11 @@ function insertText(newText) {
           }
         }
       } else {
-        const element = elements[i].getElement();
-        if (!replaced && element.editAsText) {
+        const element = elements[i].getElement().asText();
+        if (!replaced && element.editAsText()) {
           // Only translate elements that can be edited as text, removing other
           // elements.
-          element.clear();
-          element.asText().setText(newText);
+          element.setText(newText);
           replaced = true;
         } else {
           // We cannot remove the last paragraph of a doc. If this is the case,
@@ -203,13 +213,16 @@ function insertText(newText) {
           if (element.getNextSibling()) {
             element.removeFromParent();
           } else {
-            element.clear();
+            element.setText('');
           }
         }
       }
     }
   } else {
     const cursor = DocumentApp.getActiveDocument().getCursor();
+    if (!cursor) {
+      return;
+    }
     const surroundingText = cursor.getSurroundingText().getText();
     const surroundingTextOffset = cursor.getSurroundingTextOffset();
 
@@ -243,7 +256,7 @@ function insertText(newText) {
  * @return {string} The result of the translation, or the original text if
  *     origin and dest languages are the same.
  */
-function translateText(text, origin, dest) {
+function translateText(text: string, origin: string, dest: string) {
   if (origin === dest) return text;
   return LanguageApp.translate(text, origin, dest);
 }

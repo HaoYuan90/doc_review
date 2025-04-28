@@ -13,9 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * @OnlyCurrentDoc
+ *
+ * The above comment directs Apps Script to limit the scope of file
+ * access for this add-on. It specifies that this add-on will only
+ * attempt to read or modify the files in which the add-on is used,
+ * and not all of the user's files. The authorization request message
+ * presented to users will reflect this limited scope.
+ */
 import { hello } from './example-module';
 
 console.log(hello());
+
+function onOpen(_e: any) {
+  DocumentApp.getUi()
+    .createAddonMenu()
+    .addItem('Start', 'showSidebar')
+    .addToUi();
+}
+
+function onInstall(e: any) {
+  onOpen(e);
+}
+
+function showSidebar() {
+  const ui = HtmlService.createTemplateFromFile('ui')
+    .evaluate()
+    .setTitle('Doc Review');
+  DocumentApp.getUi().showSidebar(ui);
+}
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 function doGet() {
