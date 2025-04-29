@@ -23,19 +23,19 @@
     "typescript": "^5.8.3"
   },
   "scripts": {
-    "preinstall": "test -d src/ui || (cd src/ && ng new --skip-git --skip-tests=true --routing=false --ssr=false --standalone ui && cd ui/ && ng add --skip-confirmation @angular/material)",
+    "preinstall": "test -d ui || (cd src/ && ng new --skip-git --skip-tests=true --routing=false --ssr=false --standalone ui && cd ui/ && ng add --skip-confirmation @angular/material)",
     "clean": "rimraf build dist",
     "lint": "eslint --fix --no-error-on-unmatched-pattern src/ test/",
     "bundle": "rollup --no-treeshake -c rollup.config.mjs",
     "build": "npm run clean && npm run bundle",
-    "build-ui": "npm run build --prefix src/ui",
+    "build-ui": "npm run build --prefix ui",
     "test": "jest test/ --passWithNoTests --detectOpenHandles",
-    "test-ui": "npm run test --prefix src/ui",
+    "test-ui": "npm run test --prefix ui",
     "deploy": "npm run lint && npm run test && npm run build && ncp appsscript.json dist/appsscript.json && ncp .clasp-dev.json .clasp.json && npm run build-ui && npm run deploy-ui && clasp push -f",
     "deploy-ui": "node deploy-ui.mjs",
     "deploy:prod": "npm run lint && npm run test && npm run build && ncp appsscript.json dist/appsscript.json && ncp .clasp-prod.json .clasp.json && npm run build-ui && npm run deploy-ui && clasp push",
-    "serve-ui": "cd src/ui && ng serve",
+    "serve-ui": "cd ui && ng serve",
     "fix-animations": "node fix-animations.mjs",
-    "postinstall": "npm run fix-animations && cd src/ui && npm install"
+    "postinstall": "npm run fix-animations && cd ui && npm install"
   }
 }
