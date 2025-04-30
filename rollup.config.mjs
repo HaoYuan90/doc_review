@@ -25,7 +25,7 @@ export default {
     format: 'esm',
   },
   plugins: [
-    cleanup({ comments: 'none', extensions: ['.ts'] }),
+    cleanup({ comments: 'some', extensions: ['.ts'] }),
     typescript(),
     prettier({ parser: 'typescript' }),
   ],

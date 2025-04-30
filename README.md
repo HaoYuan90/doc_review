@@ -8,9 +8,10 @@ Run the following command to transpile Typescript to Javascript and publish all 
 npm deploy
 ```
 
-*TODO*: Document required clasp config just in case.
+### Limitations
+- Apps Script API does not return comment author's email address. Nor does it allow searching for a user's display name from email address.
 
-*TODO*: @OnlyCurrentDoc annotation is not added to main script.
+*TODO*: Document required clasp config just in case.
 
 *TODO*: Re-enable license module. Currently license module adds license header to some empty files and is causing memory leak during `ng build`.
 
