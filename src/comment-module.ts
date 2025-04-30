@@ -8,7 +8,10 @@ const emailExp = '[a-z0-9+_.-]+@[a-z0-9.-]+\\.[a-z0-9]{2,}';
 const nameExp = '[a-z]+(?:[\\s.]+[a-z]+)*';
 const typeExp = 'reviewer|approver';
 const teamExp = '[a-z0-9]+(?:[\\s.]+[a-z0-9]+)*';
-const reviewCommentExp = new RegExp(`^@(${emailExp})\\s?\\(\\s?(${nameExp})\\s?\\)\\s?,\\s?(${typeExp})\\s?,\\s?(${teamExp})$`, 'i');
+const reviewCommentExp = new RegExp(
+  `^@(${emailExp})\\s?\\(\\s?(${nameExp})\\s?\\)\\s?,\\s?(${typeExp})\\s?,\\s?(${teamExp})$`,
+  'i'
+);
 
 const resolveAction = 'resolve';
 
@@ -32,7 +35,7 @@ export interface ReviewerInfo {
 
 export interface ReviewerInfoStatus {
   info: ReviewerInfo;
-  status: ReviewStatus
+  status: ReviewStatus;
 }
 
 function parseReviewerInfo(text: string): ReviewerInfo | null {
@@ -40,7 +43,10 @@ function parseReviewerInfo(text: string): ReviewerInfo | null {
   if (match) {
     const email = match[1];
     const name = match[2];
-    const type = match[3].toLowerCase() === 'reviewer' ? ReviewerType.Reviewer : ReviewerType.Approver;
+    const type =
+      match[3].toLowerCase() === 'reviewer'
+        ? ReviewerType.Reviewer
+        : ReviewerType.Approver;
     const team = match[4];
     return { email, name, type, team };
   } else {
@@ -87,7 +93,11 @@ export function processAllComments(): ReviewerInfoStatus[] {
         continue;
       }
       if (reviewerInfoByName.has(reviewerInfo.name)) {
-        console.warn('Duplicate comments getting review from (%s, %s)', reviewerInfo.email, reviewerInfo.name);
+        console.warn(
+          'Duplicate comments getting review from (%s, %s)',
+          reviewerInfo.email,
+          reviewerInfo.name
+        );
         continue;
       }
       reviewerInfoByName.set(reviewerInfo.name, reviewerInfo);
@@ -110,10 +120,16 @@ export function processAllComments(): ReviewerInfoStatus[] {
   } while (pageToken);
 
   // Process approval status
-  const infoList = Array.from(reviewerInfoByName.values()).sort((a, b) => a.email.localeCompare(b.email));
-  let infoStatusList: ReviewerInfoStatus[] = [];
+  const infoList = Array.from(reviewerInfoByName.values()).sort((a, b) =>
+    a.email.localeCompare(b.email)
+  );
+  const infoStatusList: ReviewerInfoStatus[] = [];
   for (const info of infoList) {
-    const status = approvedByName.has(info.name) ? ReviewStatus.Approved : (reviewedByName.has(info.name) ? ReviewStatus.InProgress : ReviewStatus.NotStarted);
+    const status = approvedByName.has(info.name)
+      ? ReviewStatus.Approved
+      : reviewedByName.has(info.name)
+        ? ReviewStatus.InProgress
+        : ReviewStatus.NotStarted;
     infoStatusList.push({ info, status });
   }
   return infoStatusList;
@@ -221,7 +237,7 @@ function insertText(newText: string) {
     if (
       elements.length === 1 &&
       elements[0].getElement().getType() ===
-      DocumentApp.ElementType.INLINE_IMAGE
+        DocumentApp.ElementType.INLINE_IMAGE
     ) {
       throw new Error("Can't insert text into an image.");
     }
@@ -311,5 +327,5 @@ function translateText(text: string, origin: string, dest: string) {
 }
 
 export const internal = {
-  parseReviewerInfo
-}
+  parseReviewerInfo,
+};
