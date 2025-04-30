@@ -10,9 +10,17 @@ const typeExp = 'reviewer|approver';
 const teamExp = '[a-z0-9]+(?:[\\s.]+[a-z0-9]+)*';
 const reviewCommentExp = new RegExp(`^@(${emailExp})\\s?\\(\\s?(${nameExp})\\s?\\)\\s?,\\s?(${typeExp})\\s?,\\s?(${teamExp})$`, 'i');
 
+const resolveAction = 'resolve';
+
 export enum ReviewerType {
   Reviewer,
   Approver,
+}
+
+export enum ReviewStatus {
+  NotStarted,
+  InProgress,
+  Approved,
 }
 
 export interface ReviewerInfo {
@@ -20,6 +28,11 @@ export interface ReviewerInfo {
   name: string;
   type: ReviewerType;
   team: string;
+}
+
+export interface ReviewerInfoStatus {
+  info: ReviewerInfo;
+  status: ReviewStatus
 }
 
 function parseReviewerInfo(text: string): ReviewerInfo | null {
@@ -44,11 +57,10 @@ function getComments(pageToken: string | undefined) {
   });
 }
 
-export function processAllComments() {
+export function processAllComments(): ReviewerInfoStatus[] {
   let pageToken: string | undefined = undefined;
 
-  const emailByName = new Map<string, string>();
-  const reviewerTypeByName = new Map<string, ReviewerType>();
+  const reviewerInfoByName = new Map<string, ReviewerInfo>();
   const reviewedByName = new Set<string>();
   const approvedByName = new Set<string>();
 
@@ -60,14 +72,51 @@ export function processAllComments() {
     }
     const comments = resp.comments;
     for (const comment of comments) {
-      console.log(comment);
-      if (comment.replies) {
-        for (const reply of comment.replies) {
-          console.log(reply);
+      if (comment.deleted) {
+        continue;
+      }
+      if (comment.author && comment.author.displayName) {
+        // People who left left comments in the doc have reviewed it
+        reviewedByName.add(comment.author.displayName);
+      }
+      if (!comment.content) {
+        continue;
+      }
+      const reviewerInfo = parseReviewerInfo(comment.content);
+      if (!reviewerInfo) {
+        continue;
+      }
+      if (reviewerInfoByName.has(reviewerInfo.name)) {
+        console.warn('Duplicate comments getting review from (%s, %s)', reviewerInfo.email, reviewerInfo.name);
+        continue;
+      }
+      reviewerInfoByName.set(reviewerInfo.name, reviewerInfo);
+
+      if (!comment.resolved || !comment.replies) {
+        // Resolved comment will definitely have at least one reply
+        continue;
+      }
+      // Process resolved comment from replies
+      for (const reply of comment.replies) {
+        // TODO: Does not handle when comment is repeatedly resolved and unresolved
+        if (reply.deleted || reply.action !== resolveAction) {
+          continue;
+        }
+        if (reviewerInfo.name === reply.author?.displayName) {
+          approvedByName.add(reviewerInfo.name);
         }
       }
     }
   } while (pageToken);
+
+  // Process approval status
+  const infoList = Array.from(reviewerInfoByName.values()).sort((a, b) => a.email.localeCompare(b.email));
+  let infoStatusList: ReviewerInfoStatus[] = [];
+  for (const info of infoList) {
+    const status = approvedByName.has(info.name) ? ReviewStatus.Approved : (reviewedByName.has(info.name) ? ReviewStatus.InProgress : ReviewStatus.NotStarted);
+    infoStatusList.push({ info, status });
+  }
+  return infoStatusList;
 }
 
 /**

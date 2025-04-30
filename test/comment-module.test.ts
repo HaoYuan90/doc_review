@@ -1,6 +1,55 @@
-import { internal, ReviewerInfo, ReviewerType } from '../src/comment-module';
+import { internal, ReviewerInfo, ReviewerType, ReviewStatus, processAllComments } from '../src/comment-module';
 
 const { parseReviewerInfo } = internal;
+
+global.Drive = {
+  Comments: {
+    list: jest.fn(),
+  } as any,
+} as any;
+
+global.DocumentApp = {
+  getActiveDocument: jest.fn(() => {
+    return {
+      getId: jest.fn(() => 'mocked current document id'),
+    }
+  })
+} as any;
+
+const defaultComment = {
+  content: 'comment',
+  author: {
+    displayName: 'John Doe',
+  },
+  deleted: false,
+  resolved: false,
+}
+
+const defaultReply = {
+  content: 'comment',
+  author: {
+    displayName: 'John Doe',
+  },
+  deleted: false,
+  action: null,
+}
+
+function getComment(overrides: any = {}, replies: any[] = []) {
+  return {
+    ...defaultComment,
+    ...overrides,
+    author: { ...defaultComment.author, ...overrides.author },
+    replies: replies
+  }
+}
+
+function getReply(overrides: any = {}) {
+  return {
+    ...defaultReply,
+    ...overrides,
+    author: { ...defaultReply.author, ...overrides.author },
+  }
+}
 
 describe('comment-module', () => {
   describe('parseReviewerInfo', () => {
@@ -64,5 +113,142 @@ describe('comment-module', () => {
       expect(parseReviewerInfo('@email@gmail.com(Xiao Ming),reviewer,')).toBeNull();
     });
 
+  });
+  describe.only('processAllComments', () => {
+    it('processes unactioned review', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [getComment({ content: '@x@x.com(John),reviewer,CEO', author: { displayName: 'Me' } })],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([
+        {
+          info: {
+            email: 'x@x.com',
+            name: 'John',
+            type: ReviewerType.Reviewer,
+            team: 'CEO',
+          },
+          status: ReviewStatus.NotStarted,
+        }
+      ]);
+    });
+
+    it('processes ongoing review', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [
+            getComment({ content: '@x@x.com(John),reviewer,CEO', author: { displayName: 'Me' } }),
+            getComment({ content: 'Check this line you got a typo', author: { displayName: 'John' } }),
+          ],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([
+        {
+          info: {
+            email: 'x@x.com',
+            name: 'John',
+            type: ReviewerType.Reviewer,
+            team: 'CEO',
+          },
+          status: ReviewStatus.InProgress,
+        }
+      ]);
+    });
+
+    it('processes resolved review', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [
+            getComment({ content: '@x@x.com(John),reviewer,CEO', resolved: true, author: { displayName: 'Me' } }, [
+              getReply({action: 'resolve', author: { displayName: 'John' }}),
+            ]),
+            getComment({ content: 'Check this line you got a typo', author: { displayName: 'John' } }),
+          ],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([
+        {
+          info: {
+            email: 'x@x.com',
+            name: 'John',
+            type: ReviewerType.Reviewer,
+            team: 'CEO',
+          },
+          status: ReviewStatus.Approved,
+        }
+      ]);
+    });
+
+    it('processes mixed review requests and statuses', () => {
+      // TODO: complete this test
+      // Test pagination here too
+    });
+
+    it('ignores deleted review request', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [getComment({ content: '@x@x.com(John),reviewer,CEO', deleted: true, author: { displayName: 'Me' } })],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([]);
+    });
+
+    it('ignores deleted comment', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [
+            getComment({ content: '@x@x.com(John),reviewer,CEO', author: { displayName: 'Me' } }),
+            getComment({ content: 'Check this line you got a typo', deleted: true, author: { displayName: 'John' } }),
+          ],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([
+        {
+          info: {
+            email: 'x@x.com',
+            name: 'John',
+            type: ReviewerType.Reviewer,
+            team: 'CEO',
+          },
+          status: ReviewStatus.NotStarted,
+        }
+      ]);
+    });
+
+    it('ignores review request resolved by other than the reviewer requested', () => {
+      Drive.Comments.list = jest.fn(() => {
+        return {
+          comments: [
+            getComment({ content: '@x@x.com(John),reviewer,CEO', resolved: true, author: { displayName: 'Me' } }, [
+              getReply({action: 'resolve', author: { displayName: 'Me' }}),
+            ]),
+          ],
+          nextPageToken: undefined,
+        };
+      });
+
+      expect(processAllComments()).toEqual([
+        {
+          info: {
+            email: 'x@x.com',
+            name: 'John',
+            type: ReviewerType.Reviewer,
+            team: 'CEO',
+          },
+          status: ReviewStatus.NotStarted,
+        }
+      ]);
+    });
   });
 });
