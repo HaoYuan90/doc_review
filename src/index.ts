@@ -14,23 +14,17 @@
  * limitations under the License.
  */
 /**
+ * @preserve
  * @OnlyCurrentDoc
- *
- * The above comment directs Apps Script to limit the scope of file
- * access for this add-on. It specifies that this add-on will only
- * attempt to read or modify the files in which the add-on is used,
- * and not all of the user's files. The authorization request message
- * presented to users will reflect this limited scope.
  */
-import { hello } from './example-module';
-
-console.log(hello());
+import { processAllComments } from './comment-module';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
     .createAddonMenu()
     .addItem('Start', 'showSidebar')
     .addToUi();
+  processAllComments();
 }
 
 function onInstall(e: any) {
