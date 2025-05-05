@@ -122,5 +122,5 @@ export function testInsert() {
     },
   ];
   insertDocReviewTable(element, reviewers);
-  console.log('Inserted doc review table');
+  console.log('(Test) Inserted doc review table');
 }

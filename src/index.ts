@@ -26,7 +26,7 @@ import {
 function onOpen(_e: any) {
   DocumentApp.getUi()
     .createAddonMenu()
-    .addItem('Start', 'showSidebar')
+    .addItem('Menu', 'showSidebar')
     .addToUi();
   const reviewerInfo = processAllComments();
   const anchor = getDocReviewInsertionPoint();
@@ -48,13 +48,4 @@ function showSidebar() {
     .evaluate()
     .setTitle('Doc Review');
   DocumentApp.getUi().showSidebar(ui);
-}
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
-function doGet() {
-  return HtmlService.createTemplateFromFile('ui').evaluate().setTitle('');
-}
-/* eslint-disable @typescript-eslint/no-unused-vars */
-function include(filename: string) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
