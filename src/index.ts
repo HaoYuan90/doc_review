@@ -18,7 +18,10 @@
  * @OnlyCurrentDoc
  */
 import { processAllComments } from './comment-module';
-import { getDocReviewInsertionPoint } from './draw-module';
+import {
+  getDocReviewInsertionPoint,
+  insertDocReviewTable,
+} from './draw-module';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
@@ -26,9 +29,14 @@ function onOpen(_e: any) {
     .addItem('Start', 'showSidebar')
     .addToUi();
   const reviewerInfo = processAllComments();
-  const currReviewerInfo = []; // TODO: get reviewer info from document
-  // TODO: draw reviewer info
-  console.log(getDocReviewInsertionPoint());
+  const anchor = getDocReviewInsertionPoint();
+  if (anchor) {
+    insertDocReviewTable(anchor, reviewerInfo);
+  } else {
+    const currReviewerInfo = []; // TODO: get reviewer info from document
+    // TODO: If stored reviewer information does not agree with comments, update
+    // otherwise pass through
+  }
 }
 
 function onInstall(e: any) {

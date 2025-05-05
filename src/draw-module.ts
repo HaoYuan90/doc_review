@@ -3,212 +3,124 @@
  * @OnlyCurrentDoc
  */
 
+import {
+  ReviewerType,
+  ReviewStatus,
+  ReviewerInfoStatus,
+} from './comment-module';
+
 const docReviewTableStr = '#insertDocReviewTable';
 
 export function getDocReviewInsertionPoint() {
   const body = DocumentApp.getActiveDocument().getBody();
   const searchResult = body.findText(docReviewTableStr);
-  if (searchResult) {
-    console.log(searchResult);
-    // const element = searchResult.getElement();
-    // const startOffset = searchResult.getStartOffset();
-    // const endOffset = searchResult.getEndOffsetInclusive();
-    // return {
-    // element: element,
-    // startOffset: startOffset,
-    // endOffset: endOffset,
-    // };
+  if (!searchResult) {
+    console.warn(`Doc review table anchor ${docReviewTableStr} is not found.`);
+    return null;
   }
-  return null;
+  return searchResult.getElement();
 }
 
-/**
- * Gets the text the user has selected. If there is no selection,
- * this function displays an error message.
- *
- * @return {Array.<string>} The selected text.
- */
-function getSelectedText() {
-  const selection = DocumentApp.getActiveDocument().getSelection();
-  const text = [];
-  if (selection) {
-    const elements = selection.getSelectedElements();
-    for (let i = 0; i < elements.length; ++i) {
-      if (elements[i].isPartial()) {
-        const element = elements[i].getElement().asText();
-        const startIndex = elements[i].getStartOffset();
-        const endIndex = elements[i].getEndOffsetInclusive();
-
-        text.push(element.getText().substring(startIndex, endIndex + 1));
-      } else {
-        const element = elements[i].getElement().asText();
-        // Only translate elements that can be edited as text; skip images and
-        // other non-text elements.
-        if (element.editAsText()) {
-          const elementText = element.getText();
-          // This check is necessary to exclude images, which return a blank
-          // text element.
-          if (elementText) {
-            text.push(elementText);
-          }
-        }
-      }
-    }
+function getClosestParentParagraph(element: GoogleAppsScript.Document.Element) {
+  let parent = element.getParent();
+  while (parent && parent.getType() !== DocumentApp.ElementType.PARAGRAPH) {
+    parent = parent.getParent();
   }
-  if (!text.length) throw new Error('Please select some text.');
-  return text;
+  return parent;
 }
 
 /**
- * Gets the stored user preferences for the origin and destination languages,
- * if they exist.
- * This method is only used by the regular add-on, and is never called by
- * the mobile add-on version.
+ * Inserts a four column table into the document at the specified element.
+ * The table will have the following columns:
+ * 1. Reviewer name
+ * 2. Reviewer type (Reviewer or Approver)
+ * 3. Reviewer team
+ * 4. Review status
  *
- * @return {Object} The user's origin and destination language preferences, if
- *     they exist.
+ * @param element The element to insert the doc review table into.
+ * @param reviewers The list of reviewers to insert into the table.
  */
-function getPreferences() {
-  const userProperties = PropertiesService.getUserProperties();
-  return {
-    originLang: userProperties.getProperty('originLang'),
-    destLang: userProperties.getProperty('destLang'),
-  };
-}
-
-/**
- * Gets the user-selected text and translates it from the origin language to the
- * destination language. The languages are notated by their two-letter short
- * form. For example, English is 'en', and Spanish is 'es'. The origin language
- * may be specified as an empty string to indicate that Google Translate should
- * auto-detect the language.
- *
- * @param {string} origin The two-letter short form for the origin language.
- * @param {string} dest The two-letter short form for the destination language.
- * @param {boolean} savePrefs Whether to save the origin and destination
- *     language preferences.
- * @return {Object} Object containing the original text and the result of the
- *     translation.
- */
-function getTextAndTranslation(
-  origin: string,
-  dest: string,
-  savePrefs: boolean
+export function insertDocReviewTable(
+  element: GoogleAppsScript.Document.Element,
+  reviewers: ReviewerInfoStatus[]
 ) {
-  if (savePrefs) {
-    PropertiesService.getUserProperties()
-      .setProperty('originLang', origin)
-      .setProperty('destLang', dest);
+  const parentPara = getClosestParentParagraph(element);
+  if (!parentPara) {
+    console.warn('Failed to find parent paragraph of insertion anchor.');
+    return;
   }
-  const text = getSelectedText().join('\n');
-  return {
-    text: text,
-    translation: translateText(text, origin, dest),
-  };
+  const body = DocumentApp.getActiveDocument().getBody();
+  const parentDom = parentPara.getParent();
+
+  const cells = [['#DocReview', 'Team', 'Type', 'Status']];
+  // TODO: Create smart chip of type "person" instead of using just the person's name.
+  // This feature is not supported by apps script yet.
+  // https://issuetracker.google.com/issues/225584757
+  for (const reviewer of reviewers) {
+    cells.push([
+      reviewer.info.name,
+      reviewer.info.team,
+      reviewer.info.type,
+      reviewer.status,
+    ]);
+  }
+
+  const table = body.insertTable(
+    parentDom.getChildIndex(parentPara) + 1,
+    cells
+  );
+  for (let r = 1; r < table.getNumRows(); r++) {
+    const row = table.getRow(r);
+    row.getCell(0).asText().setBold(true); // Bold reviewer name
+    const reviewStatus = row.getCell(3).getText();
+    row.getCell(3).asText().setBold(true); // Bold review status
+    if (reviewStatus === ReviewStatus.Approved) {
+      row.getCell(3).asText().setForegroundColor('#00ff00'); // green
+    } else if (reviewStatus === ReviewStatus.InProgress) {
+      row.getCell(3).asText().setForegroundColor('#ff9900'); // orange
+    } else if (reviewStatus === ReviewStatus.NotStarted) {
+      row.getCell(3).asText().setForegroundColor('#ff0000'); // red
+    }
+  }
+  // TODO: delete insertion anchor after inserting the table
 }
 
-/**
- * Replaces the text of the current selection with the provided text, or
- * inserts text at the current cursor location. (There will always be either
- * a selection or a cursor.) If multiple elements are selected, only inserts the
- * translated text in the first element that can contain text and removes the
- * other elements.
- *
- * @param {string} newText The text with which to replace the current selection.
- */
-function insertText(newText: string) {
-  const selection = DocumentApp.getActiveDocument().getSelection();
-  if (selection) {
-    let replaced = false;
-    const elements = selection.getSelectedElements();
-    if (
-      elements.length === 1 &&
-      elements[0].getElement().getType() ===
-        DocumentApp.ElementType.INLINE_IMAGE
-    ) {
-      throw new Error("Can't insert text into an image.");
-    }
-    for (let i = 0; i < elements.length; ++i) {
-      if (elements[i].isPartial()) {
-        const element = elements[i].getElement().asText();
-        const startIndex = elements[i].getStartOffset();
-        const endIndex = elements[i].getEndOffsetInclusive();
-        element.deleteText(startIndex, endIndex);
-        if (!replaced) {
-          element.insertText(startIndex, newText);
-          replaced = true;
-        } else {
-          // This block handles a selection that ends with a partial element. We
-          // want to copy this partial text to the previous element so we don't
-          // have a line-break before the last partial.
-          const parent = element.getParent();
-          const remainingText = element.getText().substring(endIndex + 1);
-          parent.getPreviousSibling().asText().appendText(remainingText);
-          // We cannot remove the last paragraph of a doc. If this is the case,
-          // just remove the text within the last paragraph instead.
-          if (parent.getNextSibling()) {
-            parent.removeFromParent();
-          } else {
-            element.removeFromParent();
-          }
-        }
-      } else {
-        const element = elements[i].getElement().asText();
-        if (!replaced && element.editAsText()) {
-          // Only translate elements that can be edited as text, removing other
-          // elements.
-          element.setText(newText);
-          replaced = true;
-        } else {
-          // We cannot remove the last paragraph of a doc. If this is the case,
-          // just clear the element.
-          if (element.getNextSibling()) {
-            element.removeFromParent();
-          } else {
-            element.setText('');
-          }
-        }
-      }
-    }
-  } else {
-    const cursor = DocumentApp.getActiveDocument().getCursor();
-    if (!cursor) {
-      return;
-    }
-    const surroundingText = cursor.getSurroundingText().getText();
-    const surroundingTextOffset = cursor.getSurroundingTextOffset();
-
-    // If the cursor follows or preceds a non-space character, insert a space
-    // between the character and the translation. Otherwise, just insert the
-    // translation.
-    if (surroundingTextOffset > 0) {
-      if (surroundingText.charAt(surroundingTextOffset - 1) !== ' ') {
-        newText = ' ' + newText;
-      }
-    }
-    if (surroundingTextOffset < surroundingText.length) {
-      if (surroundingText.charAt(surroundingTextOffset) !== ' ') {
-        newText += ' ';
-      }
-    }
-    cursor.insertText(newText);
+// TODO: This function is for testing purposes only. It should be removed in production.
+export function testInsert() {
+  const element = getDocReviewInsertionPoint();
+  if (!element) {
+    console.warn('Element is null');
+    return;
   }
-}
-
-/**
- * Given text, translate it from the origin language to the destination
- * language. The languages are notated by their two-letter short form. For
- * example, English is 'en', and Spanish is 'es'. The origin language may be
- * specified as an empty string to indicate that Google Translate should
- * auto-detect the language.
- *
- * @param {string} text text to translate.
- * @param {string} origin The two-letter short form for the origin language.
- * @param {string} dest The two-letter short form for the destination language.
- * @return {string} The result of the translation, or the original text if
- *     origin and dest languages are the same.
- */
-function translateText(text: string, origin: string, dest: string) {
-  if (origin === dest) return text;
-  return LanguageApp.translate(text, origin, dest);
+  const reviewers: ReviewerInfoStatus[] = [
+    {
+      info: {
+        email: 'email@gmail.com',
+        name: 'Xiao Ming 1',
+        type: ReviewerType.Reviewer,
+        team: 'xfn',
+      },
+      status: ReviewStatus.NotStarted,
+    },
+    {
+      info: {
+        email: 'email@gmail.com',
+        name: 'Xiao Ming 2',
+        type: ReviewerType.Approver,
+        team: '',
+      },
+      status: ReviewStatus.InProgress,
+    },
+    {
+      info: {
+        email: 'email@gmail.com',
+        name: 'Xiao Ming 3',
+        type: ReviewerType.Approver,
+        team: 'meowski',
+      },
+      status: ReviewStatus.Approved,
+    },
+  ];
+  insertDocReviewTable(element, reviewers);
+  console.log('Inserted doc review table');
 }
