@@ -18,13 +18,17 @@
  * @OnlyCurrentDoc
  */
 import { processAllComments } from './comment-module';
+import { getDocReviewInsertionPoint } from './draw-module';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
     .createAddonMenu()
     .addItem('Start', 'showSidebar')
     .addToUi();
-  processAllComments();
+  const reviewerInfo = processAllComments();
+  const currReviewerInfo = []; // TODO: get reviewer info from document
+  // TODO: draw reviewer info
+  console.log(getDocReviewInsertionPoint());
 }
 
 function onInstall(e: any) {
