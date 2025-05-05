@@ -49,3 +49,8 @@ function showSidebar() {
     .setTitle('Doc Review');
   DocumentApp.getUi().showSidebar(ui);
 }
+
+/* eslint-disable @typescript-eslint/no-unused-vars */
+function include(filename: string) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}

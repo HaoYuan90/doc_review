@@ -14,6 +14,15 @@ export class AppComponent {
   }
 
   public onUpdateClick(): void {
+    // @ts-ignore
+    google.script.run
+      .withFailureHandler((error: Error) => {
+        console.error(
+          'Failed to update document review table.',
+          error
+        );
+      })
+      .testInsert();
     console.log('Update button clicked');
   }
 }
