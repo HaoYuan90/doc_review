@@ -7,7 +7,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
   selector: 'sidebar-menu',
   imports: [MatButtonModule, MatTooltipModule, MatToolbarModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.less',
+  styleUrl: './app.component.scss',
 })
 export class AppComponent {
   title = 'Menu';
