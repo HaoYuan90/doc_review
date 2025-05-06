@@ -1,8 +1,14 @@
 <main>
-<div class="sidebar">
-  <span class="padding-top"></span>
-  <span class="heading">Doc Review (V0)</span>
-  <button class="sidebar-button update-button" id="update-button" (click)="onUpdateClick()">Update doc review table</button>
-  <button class="sidebar-button debug-button" id="debug-button" (click)="onDebugClick()">Troubleshoot</button>
-</div>
+  <div class="sidebar">
+    <span class="padding-top"></span>
+    <mat-toolbar class="sidebar-header">
+      <span>Doc Review v0.0</span>
+    </mat-toolbar>
+    <button mat-stroked-button matTooltip="Create or update doc review table in current doc." matTooltipShowDelay=1000
+      class="sidebar-button update-button mat-tooltip-panel-below" id="update-button" (click)="onUpdateClick()">Update
+      doc review table</button>
+    <button mat-stroked-button matTooltip="Troubleshoot why doc review table is not created or updated."
+      matTooltipShowDelay=1000 class="sidebar-button debug-button mat-tooltip-panel-below" id="debug-button"
+      (click)="onDebugClick()">Troubleshoot</button>
+  </div>
 </main>

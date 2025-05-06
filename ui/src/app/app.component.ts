@@ -1,8 +1,11 @@
 import { Component } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatToolbarModule } from '@angular/material/toolbar';
 
 @Component({
   selector: 'sidebar-menu',
-  imports: [],
+  imports: [MatButtonModule, MatTooltipModule, MatToolbarModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.less',
 })
