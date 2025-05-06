@@ -1,6 +1,4 @@
 /**
- * Copyright 2023 Google LLC
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,7 +19,7 @@ import { processAllComments } from './comment-module';
 import {
   getDocReviewInsertionPoint,
   insertDocReviewTable,
-} from './draw-module';
+} from './doc-module';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
