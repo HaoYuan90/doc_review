@@ -15,6 +15,7 @@
     "CONTRIBUTING",
     "dist",
     "README.md",
+    "ui/.angular",
     "ui/src/*.d.ts",
     "ui/src/*.html",
     "ui/src/*.scss",
