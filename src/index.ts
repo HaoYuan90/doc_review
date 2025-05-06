@@ -16,10 +16,7 @@
  * @OnlyCurrentDoc
  */
 import { processAllComments } from './comment-module';
-import {
-  getDocReviewInsertionPoint,
-  insertDocReviewTable,
-} from './doc-module';
+import { getDocReviewInsertionPoint, insertDocReviewTable } from './doc-module';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()

@@ -17,5 +17,4 @@ npm run deploy
 
 *TODO*: Document required clasp config just in case.
 
-*TODO*: Re-enable license module. Currently license module adds license header to some empty files and is causing memory leak during `ng build`.
 
