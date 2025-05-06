@@ -22,7 +22,8 @@
 import { ReviewerInfoStatus, processAllComments } from './comment-module';
 import {
   getDocReviewInsertionPoint,
-  insertDocReviewTable,
+  insertDocReviewTableAfterAnchor,
+  replaceDocReviewTable,
   getDocReviewTableElement,
   reviewerInfoStatusFromDocReviewTable,
 } from './doc-module';
@@ -65,7 +66,7 @@ export function createOrUpdateDocReviewTable(): void {
   const reviewerInfo = processAllComments();
   const anchor = getDocReviewInsertionPoint();
   if (anchor) {
-    insertDocReviewTable(anchor, reviewerInfo);
+    insertDocReviewTableAfterAnchor(anchor, reviewerInfo);
   } else {
     const tableElement = getDocReviewTableElement();
     if (!tableElement) {
@@ -73,7 +74,7 @@ export function createOrUpdateDocReviewTable(): void {
     }
     const currReviewerInfo = reviewerInfoStatusFromDocReviewTable(tableElement);
     if (!reviewInfoEquals(reviewerInfo, currReviewerInfo)) {
-      // TODO: Redraw reviewer info table if reviewer information has changed.
+      replaceDocReviewTable(tableElement, reviewerInfo);
     }
   }
 }

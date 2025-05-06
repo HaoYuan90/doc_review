@@ -51,27 +51,23 @@ function getClosestParentTable(element: GoogleAppsScript.Document.Element) {
 }
 
 /**
- * Inserts a four column table into the document at the specified element.
+ * Inserts doc review table into the document at the specified location from input reviewers information.
  * The table will have the following columns:
  * 1. Reviewer name
  * 2. Reviewer team
  * 3. Reviewer type (Reviewer or Approver)
  * 4. Review status
  *
- * @param element The element to insert the doc review table into.
+ * @param body The document body to insert the table into.
+ * @param ce Containing element (parent) of the table to be inserted.
+ * @param index Child index relative to document body to insert the table at.
  * @param reviewers The list of reviewers to insert into the table.
  */
-export function insertDocReviewTable(
-  element: GoogleAppsScript.Document.Element,
+function insertDocReviewTable(
+  body: GoogleAppsScript.Document.Body,
+  index: number,
   reviewers: ReviewerInfoStatus[]
-) {
-  const parentPara = getClosestParentParagraph(element);
-  if (!parentPara) {
-    return;
-  }
-  const body = DocumentApp.getActiveDocument().getBody();
-  const parentDom = parentPara.getParent();
-
+): void {
   const cells = [[docReviewTableStr, 'Team', 'Type', 'Status']];
   // TODO: Create smart chip of type "person" instead of using just the person's name.
   // This feature is not supported by apps script yet.
@@ -85,10 +81,7 @@ export function insertDocReviewTable(
     ]);
   }
 
-  const table = body.insertTable(
-    parentDom.getChildIndex(parentPara) + 1,
-    cells
-  );
+  const table = body.insertTable(index, cells);
   for (let r = 1; r < table.getNumRows(); r++) {
     const row = table.getRow(r);
     row.getCell(0).asText().setBold(true); // Bold reviewer name
@@ -102,7 +95,50 @@ export function insertDocReviewTable(
       row.getCell(3).asText().setForegroundColor('#ff0000'); // red
     }
   }
-  // TODO: delete insertion anchor after inserting the table
+}
+
+/**
+ * Inserts doc review table after anchor string. See {@link insertDocReviewTable} for details.
+ *
+ * @param element Anchor string element.
+ * @param reviewers The list of reviewers to insert into the table.
+ */
+export function insertDocReviewTableAfterAnchor(
+  element: GoogleAppsScript.Document.Element,
+  reviewers: ReviewerInfoStatus[]
+) {
+  // TODO: add stronger vaidation for paragraph
+  const parentPara = getClosestParentParagraph(element);
+  if (!parentPara) {
+    return;
+  }
+  const body = DocumentApp.getActiveDocument().getBody();
+  const parentDom = parentPara.getParent();
+  const index = parentDom.getChildIndex(parentPara) + 1;
+
+  insertDocReviewTable(body, index, reviewers);
+
+  body.removeChild(parentPara); // Remove the anchor string
+}
+
+/**
+ * Replace existing doc review table. See {@link insertDocReviewTable} for details.
+ *
+ * @param tableElement Table element for existing doc review table.
+ * @param reviewers The list of reviewers to insert into the table.
+ */
+export function replaceDocReviewTable(
+  tableElement: GoogleAppsScript.Document.Element,
+  reviewers: ReviewerInfoStatus[]
+) {
+  // TODO: add stronger validation for table
+  const body = DocumentApp.getActiveDocument().getBody();
+  const parentDom = tableElement.getParent();
+  const index = parentDom.getChildIndex(tableElement) + 1;
+
+  insertDocReviewTable(body, index, reviewers);
+
+  body.removeChild(tableElement); // Remove the old table
 }
 
 // TODO: This function is for testing purposes only. It should be removed in production.
@@ -141,7 +177,7 @@ export function testInsert() {
       status: ReviewStatus.Approved,
     },
   ];
-  insertDocReviewTable(element, reviewers);
+  insertDocReviewTableAfterAnchor(element, reviewers);
   console.log('(Test) Inserted doc review table');
 }
 

@@ -16,9 +16,9 @@
  * @OnlyCurrentDoc
  */
 
-import './comment-module';
-import './doc-module';
-import './ui-service';
+import './comment-module'; // Package module into Apps Script bundle
+import './doc-module'; // Package module into Apps Script bundle
+import './ui-service'; // Package module into Apps Script bundle
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
