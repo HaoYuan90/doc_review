@@ -15,23 +15,16 @@
  * @preserve
  * @OnlyCurrentDoc
  */
-import { processAllComments } from './comment-module';
-import { getDocReviewInsertionPoint, insertDocReviewTable } from './doc-module';
+
+import './comment-module';
+import './doc-module';
+import './ui-service';
 
 function onOpen(_e: any) {
   DocumentApp.getUi()
     .createAddonMenu()
     .addItem('Menu', 'showSidebar')
     .addToUi();
-  const reviewerInfo = processAllComments();
-  const anchor = getDocReviewInsertionPoint();
-  if (anchor) {
-    insertDocReviewTable(anchor, reviewerInfo);
-  } else {
-    const currReviewerInfo = []; // TODO: get reviewer info from document
-    // TODO: If stored reviewer information does not agree with comments, update
-    // otherwise pass through
-  }
 }
 
 function onInstall(e: any) {

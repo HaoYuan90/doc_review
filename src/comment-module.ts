@@ -134,7 +134,7 @@ export function processAllComments(): ReviewerInfoStatus[] {
 
   // Process approval status
   const infoList = Array.from(reviewerInfoByName.values()).sort((a, b) =>
-    a.email.localeCompare(b.email)
+    a.name.localeCompare(b.name)
   );
   const infoStatusList: ReviewerInfoStatus[] = [];
   for (const info of infoList) {

@@ -22,13 +22,13 @@ import {
   ReviewerInfoStatus,
 } from './comment-module';
 
-const docReviewTableStr = '#insertDocReviewTable';
+const docReviewAnchorStr = '#insertDocReviewTable';
+const docReviewTableStr = '#DocReview';
 
 export function getDocReviewInsertionPoint() {
   const body = DocumentApp.getActiveDocument().getBody();
-  const searchResult = body.findText(docReviewTableStr);
+  const searchResult = body.findText(docReviewAnchorStr);
   if (!searchResult) {
-    console.warn(`Doc review table anchor ${docReviewTableStr} is not found.`);
     return null;
   }
   return searchResult.getElement();
@@ -42,12 +42,20 @@ function getClosestParentParagraph(element: GoogleAppsScript.Document.Element) {
   return parent;
 }
 
+function getClosestParentTable(element: GoogleAppsScript.Document.Element) {
+  let parent = element.getParent();
+  while (parent && parent.getType() !== DocumentApp.ElementType.TABLE) {
+    parent = parent.getParent();
+  }
+  return parent;
+}
+
 /**
  * Inserts a four column table into the document at the specified element.
  * The table will have the following columns:
  * 1. Reviewer name
- * 2. Reviewer type (Reviewer or Approver)
- * 3. Reviewer team
+ * 2. Reviewer team
+ * 3. Reviewer type (Reviewer or Approver)
  * 4. Review status
  *
  * @param element The element to insert the doc review table into.
@@ -59,13 +67,12 @@ export function insertDocReviewTable(
 ) {
   const parentPara = getClosestParentParagraph(element);
   if (!parentPara) {
-    console.warn('Failed to find parent paragraph of insertion anchor.');
     return;
   }
   const body = DocumentApp.getActiveDocument().getBody();
   const parentDom = parentPara.getParent();
 
-  const cells = [['#DocReview', 'Team', 'Type', 'Status']];
+  const cells = [[docReviewTableStr, 'Team', 'Type', 'Status']];
   // TODO: Create smart chip of type "person" instead of using just the person's name.
   // This feature is not supported by apps script yet.
   // https://issuetracker.google.com/issues/225584757
@@ -136,4 +143,58 @@ export function testInsert() {
   ];
   insertDocReviewTable(element, reviewers);
   console.log('(Test) Inserted doc review table');
+}
+
+export function getDocReviewTableElement(): GoogleAppsScript.Document.Element | null {
+  const body = DocumentApp.getActiveDocument().getBody();
+  const searchResult = body.findText(docReviewTableStr);
+  if (!searchResult) {
+    return null;
+  }
+  return getClosestParentTable(searchResult.getElement());
+}
+
+function strToReviewerTypeEnum(input: string): ReviewerType {
+  switch (input) {
+    case 'Approver':
+      return ReviewerType.Approver;
+    default:
+      // Reset type to reviewer if user has edited doc review table manually.
+      // The table will likely be refreshed from comments anyways.
+      return ReviewerType.Reviewer;
+  }
+}
+
+function strToReviewStatusEnum(input: string): ReviewStatus {
+  switch (input) {
+    case 'Approved':
+      return ReviewStatus.Approved;
+    case 'In Progress':
+      return ReviewStatus.InProgress;
+    default:
+      // Reset status to not started if user has edited doc review table manually.
+      // The table will likely be refreshed from comments anyways.
+      return ReviewStatus.NotStarted;
+  }
+}
+
+export function reviewerInfoStatusFromDocReviewTable(
+  tableElement: GoogleAppsScript.Document.Element
+): ReviewerInfoStatus[] {
+  const reviewers: ReviewerInfoStatus[] = [];
+  const table = tableElement.asTable();
+  for (let r = 1; r < table.getNumRows(); r++) {
+    const row = table.getRow(r);
+    const reviewer: ReviewerInfoStatus = {
+      info: {
+        email: '',
+        name: row.getCell(0).getText(),
+        type: strToReviewerTypeEnum(row.getCell(2).getText()),
+        team: row.getCell(1).getText(),
+      },
+      status: strToReviewStatusEnum(row.getCell(3).getText()),
+    };
+    reviewers.push(reviewer);
+  }
+  return reviewers;
 }

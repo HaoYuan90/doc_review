@@ -2,3 +2,5 @@
 declare var DocumentApp: any;
 declare var Drive: any;
 declare function testInsert(): void;
+declare function troubleshoot(): string;
+declare function createOrUpdateDocReviewTable(): void;
