@@ -27,7 +27,7 @@
   "scripts": {
     "preinstall": "test -d ui || (cd src/ && ng new --skip-git --skip-tests=true --routing=false --ssr=false --standalone ui && cd ui/ && ng add --skip-confirmation @angular/material)",
     "clean": "rimraf build dist",
-    "lint": "npm run license && eslint --fix --no-error-on-unmatched-pattern src/ test/",
+    "lint": "npm run license && eslint --fix --no-error-on-unmatched-pattern src/ test/ ui/src/ ui/test/",
     "bundle": "rollup --no-treeshake -c rollup.config.mjs",
     "build": "npm run clean && npm run bundle",
     "build-ui": "npm run build --prefix ui",
